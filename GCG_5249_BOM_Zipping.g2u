@@ -1,0 +1,671 @@
+Program.Sub.ScreenSU.Start
+Gui.F_ZipDrawings..Create
+Gui.F_ZipDrawings..Caption("Zip Drawings")
+Gui.F_ZipDrawings..Size(3285,2370)
+Gui.F_ZipDrawings..MinX(0)
+Gui.F_ZipDrawings..MinY(0)
+Gui.F_ZipDrawings..Position(0,0)
+Gui.F_ZipDrawings..BackColor(-2147483633)
+Gui.F_ZipDrawings..MousePointer(0)
+Gui.F_ZipDrawings..Event(UnLoad,Form_UnLoad)
+Gui.F_ZipDrawings..MaxButton(False)
+Gui.F_ZipDrawings..MinButton(False)
+Gui.F_ZipDrawings..Sizeable(False)
+Gui.F_ZipDrawings.txtBom.Create(TextBox,"",True,2220,300,0,135,345,False,0,"Arial",8,-2147483643,1)
+Gui.F_ZipDrawings.txtBom.TabStop(True)
+Gui.F_ZipDrawings.txtBom.TabIndex(1)
+Gui.F_ZipDrawings.txtBom.Event(GotFocus,txtBom_GotFocus)
+Gui.F_ZipDrawings.txtBom.Event(LostFocus,txtBom_LostFocus)
+Gui.F_ZipDrawings.txtBom.Locked(True)
+Gui.F_ZipDrawings.lblBom.Create(Label,"BOM",True,1935,255,0,120,150,True,0,"Arial",8,-2147483633,0)
+Gui.F_ZipDrawings.cmdBomBrowser.Create(Button)
+Gui.F_ZipDrawings.cmdBomBrowser.Size(450,375)
+Gui.F_ZipDrawings.cmdBomBrowser.Position(2430,300)
+Gui.F_ZipDrawings.cmdBomBrowser.TabStop(True)
+Gui.F_ZipDrawings.cmdBomBrowser.TabIndex(2)
+Gui.F_ZipDrawings.cmdBomBrowser.Caption("^")
+Gui.F_ZipDrawings.cmdBomBrowser.Event(Click,cmdBomBrowser_Click)
+Gui.F_ZipDrawings.cmdZipDrawings.Create(Button)
+Gui.F_ZipDrawings.cmdZipDrawings.Size(2775,375)
+Gui.F_ZipDrawings.cmdZipDrawings.Position(135,1335)
+Gui.F_ZipDrawings.cmdZipDrawings.TabStop(True)
+Gui.F_ZipDrawings.cmdZipDrawings.TabIndex(3)
+Gui.F_ZipDrawings.cmdZipDrawings.Caption("Zip Drawings")
+Gui.F_ZipDrawings.cmdZipDrawings.Event(Click,cmdZipDrawings_Click)
+Gui.F_ZipDrawings.lbl1.Create(Label,"ZIP Destination",True,1830,255,0,150,750,True,0,"Arial",8,-2147483633,0)
+Gui.F_ZipDrawings.txtFileDest.Create(TextBox,"",True,2175,300,0,135,930,True,0,"Arial",8,-2147483643,1)
+Gui.F_ZipDrawings.cmdFileDest.Create(Button)
+Gui.F_ZipDrawings.cmdFileDest.Size(450,375)
+Gui.F_ZipDrawings.cmdFileDest.Position(2430,885)
+Gui.F_ZipDrawings.cmdFileDest.TabStop(True)
+Gui.F_ZipDrawings.cmdFileDest.TabIndex(2)
+Gui.F_ZipDrawings.cmdFileDest.Caption("^")
+Gui.F_ZipDrawings.cmdFileDest.Event(Click,cmdFileDest_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global.sBom.Declare
+v.Global.sBomRev.Declare
+v.Global.sBomRevNoSpc.Declare
+v.Global.sPdfPath.Declare
+v.Global.iCntDV.Declare
+v.Global.sFolderPath.Declare
+v.Global.sCopiedFiles.Declare
+v.Global.sZippedFiles.Declare
+v.Global.iZipCnt.Declare
+v.Global.sUnZippedFiles.Declare
+v.Global.iUnZipCnt.Declare
+v.Global.sPartNoSpace.Declare
+v.Global.sDxfPath.Declare
+v.Global.sStpPath.Declare
+v.Global.sIgsPath.Declare
+v.Global.iTabCnt.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'v.Global.sFolderPath.Set(v.Local.sFolderPath)
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\ZIPS", v.Caller.GlobalDir, v.Global.sFolderPath)
+
+f.Intrinsic.Control.CallSub(CustomFolderPreCheck)
+
+f.Intrinsic.Control.SelectCase(v.Caller.Hook)
+	f.Intrinsic.Control.Case(16300)
+		v.Passed.000216.Set("Zip Drawings")
+		f.Intrinsic.Control.End
+	f.Intrinsic.Control.Case(16380)
+		f.Intrinsic.Control.If(v.Passed.000001, =, "")
+			f.Intrinsic.UI.Msgbox("Please select a valid BOM")
+			f.Intrinsic.Control.End
+		f.Intrinsic.Control.Else			
+'			f.Intrinsic.Control.CallSub(getBom)
+'			f.Intrinsic.Control.CallSub(getPDFAddress)
+			v.Global.sBom.Set(v.Passed.000001)
+			v.Global.sBomRev.Set(v.Passed.000093)
+			f.Intrinsic.String.Build("{0}{1}", v.Global.sBom, v.Global.sBomRev, v.Global.sBomRevNoSpc)
+			f.Intrinsic.String.RPad(v.Global.sBom, " ", 17, v.Global.sBom)
+			f.Intrinsic.String.Build("{0}{1}", v.Global.sBom, v.Global.sBomRev, v.Global.sBom)
+'			f.Intrinsic.Control.CallSub(createFolderStructure)		
+			gui.F_ZipDrawings.txtBom.Text(v.Global.sBom)
+		f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndSelect
+
+f.Intrinsic.Control.CallSub(getBom)
+f.Intrinsic.Control.CallSub(getPDFAddress)
+gui.F_ZipDrawings.txtFileDest.Text(v.Global.sFolderPath)
+gui.F_ZipDrawings..Show
+Program.Sub.Main.End
+
+Program.Sub.CustomFolderPreCheck.Start
+v.Local.sFolder.Declare
+v.Local.bExist.Declare
+
+'Checks if the Custom Folder Exists
+f.Intrinsic.String.Build("{0}\CUSTOM", v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\LOGS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)	
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\ZIPS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+Program.Sub.CustomFolderPreCheck.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.End
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.ErrorMsg.Start
+v.Local.sError.Declare
+'Generic Error message.
+f.Intrinsic.String.Build("Project GCG_5199_Inventory_Tag.g2u {0}{0}Subroutine: {1}{0}Error: {2} with Description: {3}", v.Ambient.NewLine, v.Ambient.CurrentSubroutine, v.Ambient.ErrorNumber, v.Ambient.ErrorDescription, v.Local.sError)
+f.Intrinsic.UI.Msgbox(v.Local.sError)
+Program.Sub.ErrorMsg.End
+
+Program.Sub.txtBom_GotFocus.Start
+'change color to light green
+gui.F_ZipDrawings.txtBom.BackColor(v.Color.LtGreen)
+Program.Sub.txtBom_GotFocus.End
+
+Program.Sub.txtBom_LostFocus.Start
+'change color to white, save whats on the textbox into global variable
+gui.F_ZipDrawings.txtBom.BackColor(v.Color.White)
+v.Global.sBom.Set(v.Screen.F_ZipDrawings!txtBom.Text!FieldValTrim)
+Program.Sub.txtBom_LostFocus.End
+
+Program.Sub.cmdBomBrowser_Click.Start
+v.Local.sRet.Declare
+'launches BOM Browser, and saves the selection
+f.Intrinsic.UI.SetBrowserHotTypeAhead(true)
+f.Intrinsic.UI.CommonBrowser(3000,"",v.Local.sRet)
+f.Intrinsic.String.Split(v.Local.sRet, "*!*", v.Local.sRet)
+v.Local.sRet.RedimPreserve(0, 1)
+
+f.Intrinsic.Control.If(v.Local.sRet, =, "***CANCEL***")
+f.Intrinsic.Control.Else
+gui.F_ZipDrawings.txtBom.Text(v.Local.sRet(0))
+v.Global.sBom.Set(v.Local.sRet(0))
+f.Intrinsic.Control.EndIf
+
+Program.Sub.cmdBomBrowser_Click.End
+
+Program.Sub.cmdZipDrawings_Click.Start
+v.Local.sRev.Declare
+'checks if the texbox is empty, if not creates the folder structure and zip the files.
+f.Intrinsic.Control.If(v.Screen.F_ZipDrawings!txtBom.Text!FieldValTrim, =, "")
+	f.Intrinsic.UI.Msgbox("Please select a valid BOM")
+f.Intrinsic.Control.ElseIf(v.Screen.F_ZipDrawings!txtFileDest.Text!FieldValTrim, =, "")
+	f.Intrinsic.UI.Msgbox("Please select a Folder Destination")
+f.Intrinsic.Control.Else
+	gui.F_ZipDrawings..Enabled(False)
+	v.Global.sFolderPath.Set(v.Screen.F_ZipDrawings!txtFileDest.Text!FieldValTrim)
+	v.Global.sBom.Set(v.Screen.F_ZipDrawings!txtBom.Text)
+	f.Intrinsic.String.Left(v.Global.sBom, 17, v.Global.sBomRevNoSpc)
+	f.Intrinsic.String.Trim(v.Global.sBomRevNoSpc, v.Global.sBomRevNoSpc)
+	f.Intrinsic.String.Right(v.Global.sBom, 3, v.Local.sRev)
+	f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+	f.Intrinsic.String.Build("{0}{1}", v.Global.sBomRevNoSpc, v.Local.sRev, v.Global.sBomRevNoSpc)
+	f.Intrinsic.Control.CallSub(createFolderStructure)	
+f.Intrinsic.Control.EndIf
+Program.Sub.cmdZipDrawings_Click.End
+
+Program.Sub.getBom.Start
+f.Intrinsic.Control.Try
+'creates a datatable with bom information.
+f.ODBC.Connection!con.OpenCompanyConnection
+	f.Data.DataTable.CreateFromSQL("bomDT", "con", "Select Parent as BomParent, Sequence_Bom, Part from V_BOM_MSTR", true)
+f.ODBC.Connection!con.Close
+f.Intrinsic.Control.Catch
+	f.ODBC.Connection!con.Close
+	f.Intrinsic.Control.CallSub(ErrorMsg)
+f.Intrinsic.Control.EndTry
+Program.Sub.getBom.End
+
+Program.Sub.getPDFAddress.Start
+f.Intrinsic.Control.Try
+
+'Gets the PDF location, from ATG_DOC_PATH
+f.ODBC.Connection!con.OpenCompanyConnection
+	f.Data.DataTable.CreateFromSQL("pdfDT", "con", "Select path from ATG_DOC_PATH where doctype = 'PDF'")
+		v.Global.sPdfPath.Set(v.DataTable.pdfDT(0).Path!FieldValTrim)
+	f.Data.DataTable.Close("pdfDT")
+	
+	f.Data.DataTable.CreateFromSQL("dxfDT", "con", "Select path from ATG_DOC_PATH where doctype = 'DXF'")
+		v.Global.sDxfPath.Set(v.DataTable.dxfDT(0).Path!FieldValTrim)
+	f.Data.DataTable.Close("dxfDT")
+	
+	f.Data.DataTable.CreateFromSQL("stpDT", "con", "Select path from ATG_DOC_PATH where doctype = 'STP'")
+		v.Global.sStpPath.Set(v.DataTable.stpDT(0).Path!FieldValTrim)
+	f.Data.DataTable.Close("stpDT")
+	
+	f.Data.DataTable.CreateFromSQL("igsDT", "con", "Select path from ATG_DOC_PATH where doctype = 'IGS'")
+		v.Global.sIgsPath.Set(v.DataTable.igsDT(0).Path!FieldValTrim)
+	f.Data.DataTable.Close("igsDT")
+f.ODBC.Connection!con.Close
+f.Intrinsic.Control.Catch
+	f.ODBC.Connection!con.Close
+	f.Intrinsic.Control.CallSub(ErrorMsg)
+f.Intrinsic.Control.EndTry
+Program.Sub.getPDFAddress.End
+
+Program.Sub.createFolderStructure.Start
+v.Local.sFolderPath.Declare
+v.Local.sParentFolderPath.Declare
+v.Local.sFilePath.Declare
+v.Local.bFolderExist.Declare
+v.Local.bFileExist.Declare
+v.Local.sPart.Declare
+v.Local.sFilter.Declare
+v.Local.iCnt.Declare
+v.Local.sRev.Declare
+v.Local.sTabs.Declare
+
+v.Local.sTabs.Set("")
+
+'get all the parts from the first level of Bom
+v.Local.sPart.Set(v.Global.sBom)
+f.Intrinsic.String.Build("BomParent = '{0}'", v.Local.sPart, v.Local.sFilter)
+f.Data.DataView.Create("bomDT", "parentDV", 22, v.Local.sFilter, "Sequence_Bom")
+
+'checks if the part selected is a parent in a bom.
+f.Intrinsic.Control.If(v.DataView.bomDT!parentDV.RowCount, =, 0)
+	f.Intrinsic.UI.Msgbox("Please select a valid BOM")
+	f.Data.DataView.Close("bomDT", "parentDV")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.Else
+	'gets the Zip destination folder
+	f.Intrinsic.String.Build("{0}\{1}", v.Global.sFolderPath, v.Global.sBomRevNoSpc, v.Local.sFolderPath)
+	
+	f.Intrinsic.File.CreateDir(v.Local.sFolderPath)
+	v.Global.sFolderPath.Set(v.Local.sFolderPath)
+	'loops through the child parts from the parent.	
+
+	
+	f.Intrinsic.Control.For(v.Local.iCnt, 0, v.DataView.bomDT!parentDV.RowCount--, 1)
+		f.Intrinsic.Control.If(v.DataView.bomDT!parentDV(v.Local.iCnt).Sequence_Bom!FieldValTrim, =, "0000")
+		'Get the part name without spaces only for copying files.
+			v.Local.sPart.Set(v.DataView.bomDT!parentDV(v.Local.iCnt).BomParent!FieldValTrim)
+			
+			f.Intrinsic.Control.If(v.Local.sPart.Length, >, 16)
+				f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+				f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+				f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+				f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+				f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+			f.Intrinsic.Control.EndIf
+			f.Intrinsic.Control.CallSub(copyFiles, sPart, v.Local.sPart, sFolderPath, v.Local.sFolderPath, sTab, v.Local.sTabs)		
+		f.Intrinsic.Control.Else
+			v.Local.sPart.Set(v.DataView.bomDT!parentDV(v.Local.iCnt).Part!FieldValTrim)
+			f.Intrinsic.Control.CallSub(getChildParts, sPart, v.Local.sPart, sFolderPath, v.Local.sFolderPath, sTab, v.Local.sTabs)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	f.Data.DataView.Close("bomDT", "parentDV")
+	f.Intrinsic.Control.CallSub(zipFolder)
+f.Intrinsic.Control.EndIf
+Program.Sub.createFolderStructure.End
+
+Program.Sub.copyFiles.Start
+v.Local.sOpath.Declare
+'v.Local.sOpath.Declare
+v.Local.sNpath.Declare
+v.Local.bFileLocked.Declare
+v.Local.bFileExist.Declare
+
+v.Local.sPart.Declare
+v.Local.sNameDV.Declare
+v.Local.sChildFolder.Declare
+v.Local.sRev.Declare
+
+v.Local.sLogPart.Declare
+v.Local.sTabs.Declare
+
+v.Local.sTabs.Set(v.Args.sTab)
+v.Local.sPart.Set(v.Args.sPart)
+f.Intrinsic.Control.If(v.Local.sPart.Length, >, 16)
+	f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+	f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+	f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+	f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+	f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+f.Intrinsic.Control.EndIf
+
+'*************************************************************************************************************'
+												'PDF'
+'*************************************************************************************************************'
+f.Intrinsic.String.Build("{0}{1}.PDF", v.Local.sTabs, v.Local.sPart, v.Local.sLogPart)
+f.Intrinsic.String.Build("{0}{1}.PDF", v.Global.sPdfPath, v.Local.sPart, v.Local.sOpath)
+f.Intrinsic.String.Build("{0}\{1}.PDF", v.Args.sFolderPath, v.Local.sPart, v.Local.sNpath)
+'checks if the file is locked
+f.Intrinsic.File.IsFileLocked(v.Local.sOpath, v.Local.bFileLocked)
+f.Intrinsic.File.Exists(v.Local.sOpath, v.Local.bFileExist)
+'copies the file into the new location
+f.Intrinsic.Control.If(v.Local.bFileLocked)
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyOpenFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)
+		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+f.Intrinsic.String.Build("{0}*!*{1}", v.Global.sCopiedFiles, v.Local.sNpath, v.Global.sCopiedFiles)
+
+'*************************************************************************************************************'
+												'DXF'
+'*************************************************************************************************************'
+f.Intrinsic.String.Build("{0}{1}.DXF", v.Local.sTabs, v.Local.sPart, v.Local.sLogPart)
+f.Intrinsic.String.Build("{0}{1}.DXF", v.Global.sDxfPath, v.Local.sPart, v.Local.sOpath)
+f.Intrinsic.String.Build("{0}\{1}.DXF", v.Args.sFolderPath, v.Local.sPart, v.Local.sNpath)
+'checks if the file is locked
+f.Intrinsic.File.IsFileLocked(v.Local.sOpath, v.Local.bFileLocked)
+f.Intrinsic.File.Exists(v.Local.sOpath, v.Local.bFileExist)
+'copies the file into the new location
+f.Intrinsic.Control.If(v.Local.bFileLocked)
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyOpenFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)
+		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+f.Intrinsic.String.Build("{0}*!*{1}", v.Global.sCopiedFiles, v.Local.sNpath, v.Global.sCopiedFiles)
+
+'*************************************************************************************************************'
+												'STP'
+'*************************************************************************************************************'
+f.Intrinsic.String.Build("{0}{1}.STP", v.Local.sTabs, v.Local.sPart, v.Local.sLogPart)
+f.Intrinsic.String.Build("{0}{1}.STP", v.Global.sStpPath, v.Local.sPart, v.Local.sOpath)
+f.Intrinsic.String.Build("{0}\{1}.STP", v.Args.sFolderPath, v.Local.sPart, v.Local.sNpath)
+'checks if the file is locked
+f.Intrinsic.File.IsFileLocked(v.Local.sOpath, v.Local.bFileLocked)
+f.Intrinsic.File.Exists(v.Local.sOpath, v.Local.bFileExist)
+'copies the file into the new location
+f.Intrinsic.Control.If(v.Local.bFileLocked)
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyOpenFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)
+		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+f.Intrinsic.String.Build("{0}*!*{1}", v.Global.sCopiedFiles, v.Local.sNpath, v.Global.sCopiedFiles)
+
+'*************************************************************************************************************'
+												'IGS'
+'*************************************************************************************************************'
+f.Intrinsic.String.Build("{0}{1}.IGS", v.Local.sTabs, v.Local.sPart, v.Local.sLogPart)
+f.Intrinsic.String.Build("{0}{1}.IGS", v.Global.sIgsPath, v.Local.sPart, v.Local.sOpath)
+f.Intrinsic.String.Build("{0}\{1}.IGS", v.Args.sFolderPath, v.Local.sPart, v.Local.sNpath)
+'checks if the file is locked
+f.Intrinsic.File.IsFileLocked(v.Local.sOpath, v.Local.bFileLocked)
+f.Intrinsic.File.Exists(v.Local.sOpath, v.Local.bFileExist)
+'copies the file into the new location
+f.Intrinsic.Control.If(v.Local.bFileLocked)
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyOpenFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)
+		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		v.Global.sZippedFiles(v.Global.iZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iZipCnt, 1, v.Global.iZipCnt)
+		v.Global.sZippedFiles.RedimPreserve(0, v.Global.iZipCnt)
+		f.Intrinsic.File.CopyFile(v.Local.sOpath, v.Local.sNpath)
+	f.Intrinsic.Control.Else
+		v.Global.sUnZippedFiles.RedimPreserve(0, v.Global.iUnZipCnt)
+		v.Global.sUnZippedFiles(v.Global.iUnZipCnt).Set(v.Local.sLogPart)
+		f.Intrinsic.Math.Add(v.Global.iUnZipCnt, 1, v.Global.iUnZipCnt)		
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+f.Intrinsic.String.Build("{0}*!*{1}", v.Global.sCopiedFiles, v.Local.sNpath, v.Global.sCopiedFiles)
+Program.Sub.copyFiles.End
+
+Program.Sub.getChildParts.Start
+'v.Local.sPath.Declare
+'v.Local.sChildPart.Declare
+v.Local.sSQL.Declare
+v.Local.iCnt.Declare
+v.Local.sFolderPath.Declare
+v.Local.sPart.Declare
+v.Local.sNameDV.Declare
+v.Local.sChildFolder.Declare
+v.Local.sRev.Declare
+v.Local.sTabs.Declare
+
+v.Local.sTabs.Set(v.Args.sTab)
+f.Intrinsic.String.Build("{0}{1}", v.Local.sTabs, v.Ambient.Tab, v.Local.sTabs)
+
+
+'gets a dataview from the specific part from the bom datatable
+
+f.ODBC.Connection!con.OpenCompanyConnection
+	f.Intrinsic.String.Build("Select Parent as BomParent, Sequence_Bom, Part from V_BOM_MSTR where BomParent = '{0}'", v.Args.sPart, v.Local.sSQL)
+	f.Data.DataTable.CreateFromSQL("subParentDT", "con", v.Local.sSQL)
+f.ODBC.Connection!con.Close
+'if it is a bom parent, it will go through each child.
+v.Local.sPart.Set(v.Args.sPart)
+
+f.Intrinsic.Control.If(v.Local.sPart.Length, >, 16)
+	f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+	f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+	f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+	f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+	f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+f.Intrinsic.Control.EndIf
+			
+f.Intrinsic.Control.If(v.DataTable.subParentDT.RowCount, >, 0)
+	f.Intrinsic.String.Build("{0}\{1}", v.Args.sFolderPath, v.Local.sPart, v.Local.sFolderPath)
+'	v.Local.sPart.Set(v.Args.sPart)
+	f.Intrinsic.File.CreateDir(v.Local.sFolderPath)
+
+	f.Intrinsic.Control.For(v.Local.iCnt, 0, v.DataTable.subParentDT.RowCount--, 1)
+	'if sequence is 0000, this is the parent of this loop.
+		f.Intrinsic.Control.If(v.DataTable.subParentDT(v.Local.iCnt).Sequence_Bom!FieldValTrim, =, "0000")
+
+			v.Local.sPart.Set(v.DataTable.subParentDT(v.Local.iCnt).BomParent!FieldValTrim)
+			
+			f.Intrinsic.Control.If(v.Local.sPart.Length, >, 16)
+				f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+				f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+				f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+				f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+				f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+			f.Intrinsic.Control.EndIf
+			
+			f.Intrinsic.String.Build("{0}\{1}", v.Args.sFolderPath, v.Local.sPart, v.Local.sChildFolder)
+			
+'			f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+'			f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+'			f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+'			f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+'			f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+			
+			f.Intrinsic.Control.CallSub(copyFiles, sPart, v.Local.sPart, sFolderPath, v.Local.sChildFolder, sTab, v.Local.sTabs)	
+	'if sequence is different than 0000, this is a child, then we need to check if child is a parent of another bom, by calling this sub again.
+		f.Intrinsic.Control.Else
+			v.Local.sPart.Set(v.DataTable.subParentDT(v.Local.iCnt).Part!FieldValTrim)
+			f.Intrinsic.Control.CallSub(getChildParts, sPart, v.Local.sPart, sFolderPath, v.Local.sFolderPath, sTab, v.Local.sTabs)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+'if the part is not a parent, it just copies the file.
+f.Intrinsic.Control.ElseIf(v.DataTable.subParentDT.RowCount, =, 0)
+	
+	f.Intrinsic.Control.If(v.Local.sPart.Length, >, 16)
+		f.Intrinsic.String.Right(v.Local.sPart, 3, v.Local.sRev)
+		f.Intrinsic.String.Left(v.Local.sPart, 17, v.Local.sPart)
+		f.Intrinsic.String.Trim(v.Local.sPart, v.Local.sPart)
+		f.Intrinsic.String.Trim(v.Local.sRev, v.Local.sRev)
+		f.Intrinsic.String.Build("{0}{1}", v.Local.sPart, v.Local.sRev, v.Local.sPart)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.CallSub(copyFiles, sPart, v.Args.sPart, sFolderPath, v.Args.sFolderPath, sTab, v.Local.sTabs)	
+	f.Data.DataTable.Close("subParentDT")
+f.Intrinsic.Control.EndIf
+Program.Sub.getChildParts.End
+
+Program.Sub.zipFolder.Start
+v.Local.sZipFolder.Declare
+v.Local.bFileExists.Declare
+v.Local.sMessage.Declare
+f.Intrinsic.String.Build("{0}.zip", v.Global.sFolderPath.Trim, v.Local.sZipFolder)
+
+f.Intrinsic.Control.CallSub(logZipFiles, sFolder, v.Global.sFolderPath)
+f.Intrinsic.Control.CallSub(logUnZipFiles, sFolder, v.Global.sFolderPath)
+	
+f.Automation.Zip.Zip(v.Global.sFolderPath.Trim, v.Local.sZipFolder)
+
+f.Intrinsic.File.Exists(v.Local.sZipFolder, v.Local.bFileExists)
+
+f.Intrinsic.Control.If(v.Local.bFileExists)
+	f.Intrinsic.File.DeleteDir(v.Global.sFolderPath, true)
+	f.Intrinsic.String.Build("Zip Folder Created:{2}{0}{2}Logs Created:{2}{1}\CUSTOM\GCG_5249\LOGS", v.Local.sZipFolder, v.Caller.GlobalDir, v.Ambient.NewLine, v.Local.sMessage)
+	f.Intrinsic.UI.Msgbox(v.Local.sMessage, "Bom Zip")
+	v.Global.iUnZipCnt.Set(0)
+	v.Global.iZipCnt.Set(0)
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.Else
+	f.Intrinsic.UI.Msgbox("An error has occurred and the program was unable to zip the folder.")
+f.Intrinsic.Control.EndIf
+Program.Sub.zipFolder.End
+
+Program.Sub.logZipFiles.Start
+v.Local.sLogName.Declare
+v.Local.sLogPath.Declare
+v.Local.sFolder.Declare
+v.Local.bExist.Declare
+v.Local.iCnt.Declare
+v.Local.sDateHolder.Declare
+v.Local.sDateHolder.Redim(0,2)
+v.Local.sDate.Declare
+v.Local.sTime.Declare
+v.Local.sBomPath.Declare
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\LOGS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)	
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Split(v.Ambient.Date, "/", v.Local.sDateHolder)
+f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sDate)
+
+'f.Intrinsic.String.Split(v.Ambient.Time, ":", v.Local.sDateHolder)
+'f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sTime)
+
+f.Intrinsic.String.Build("{0}_{1}_ZipLOG.txt", v.Local.sDate, v.Global.sBom!fieldValTrim, v.Local.sLogName)
+f.Intrinsic.String.Build("{0}\{1}", v.Local.sFolder, v.Local.sLogName, v.Local.sLogPath)
+f.Intrinsic.String.Build("{0}\{1}", v.Args.sFolder, v.Local.sLogName, v.Local.sBomPath)
+
+f.Intrinsic.File.String2File(v.Local.sLogPath, "Zipped Files:")
+
+'f.Intrinsic.File.Append2File()
+
+f.Intrinsic.Control.For(v.Local.iCnt, 0, v.Global.sZippedFiles.UBound, 1)
+	f.Intrinsic.File.Append2FileNewLine(v.Local.sLogPath, v.Global.sZippedFiles(v.Local.iCnt))	
+f.Intrinsic.Control.Next(v.Local.iCnt)
+
+f.Intrinsic.File.CopyFile(v.Local.sLogPath, v.Local.sBomPath)
+
+Program.Sub.logZipFiles.End
+
+Program.Sub.logUnZipFiles.Start
+v.Local.sLogName.Declare
+v.Local.sLogPath.Declare
+v.Local.sFolder.Declare
+v.Local.bExist.Declare
+v.Local.iCnt.Declare
+v.Local.sDateHolder.Declare
+v.Local.sDateHolder.Redim(0,2)
+v.Local.sDate.Declare
+v.Local.sTime.Declare
+v.Local.sBomPath.Declare
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\LOGS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)	
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Split(v.Ambient.Date, "/", v.Local.sDateHolder)
+f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sDate)
+
+'f.Intrinsic.String.Split(v.Ambient.Time, ":", v.Local.sDateHolder)
+'f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sTime)
+
+f.Intrinsic.String.Build("{0}_{1}_UnzipLOG.txt", v.Local.sDate, v.Global.sBom!fieldValTrim, v.Local.sLogName)
+f.Intrinsic.String.Build("{0}\{1}", v.Local.sFolder, v.Local.sLogName, v.Local.sLogPath)
+f.Intrinsic.String.Build("{0}\{1}", v.Args.sFolder, v.Local.sLogName, v.Local.sBomPath)
+
+
+f.Intrinsic.File.String2File(v.Local.sLogPath, "Unzipped Files:")
+
+'f.Intrinsic.File.Append2File()
+
+f.Intrinsic.Control.For(v.Local.iCnt, 0, v.Global.sUnZippedFiles.UBound, 1)
+	f.Intrinsic.File.Append2FileNewLine(v.Local.sLogPath, v.Global.sUnZippedFiles(v.Local.iCnt))	
+f.Intrinsic.Control.Next(v.Local.iCnt)
+
+f.Intrinsic.File.CopyFile(v.Local.sLogPath, v.Local.sBomPath)
+
+Program.Sub.logUnZipFiles.End
+
+Program.Sub.cmdFileDest_Click.Start
+v.Local.sRet.Declare
+
+f.Intrinsic.UI.FolderBrowser("File Destination", v.Local.sRet)
+
+f.Intrinsic.Control.If(v.Local.sRet, =, "***CANCEL***")
+	v.Global.sFolderPath.Set(v.Screen.F_ZipDrawings!txtFileDest.Text!FieldValTrim)
+f.Intrinsic.Control.Else
+	v.Global.sFolderPath.Set(v.Local.sRet)
+f.Intrinsic.Control.EndIf
+gui.F_ZipDrawings.txtFileDest.Text(v.Global.sFolderPath)
+Program.Sub.cmdFileDest_Click.End
+
+
