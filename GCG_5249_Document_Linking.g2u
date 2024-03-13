@@ -1,0 +1,313 @@
+Program.Sub.Preflight.Start
+'Paths
+v.Global.sPathLimbo.Declare
+v.Global.sPathLimboFailed.Declare
+v.Global.sPathLogs.Declare
+v.Global.sPathDoc.Declare
+
+'Extension
+v.Global.iDocGroup.Declare
+
+'Documents
+v.Global.sDocumentList.Declare
+v.Global.sLinkedDocs.Declare
+v.Global.sLinkedLog.Declare
+v.Global.sFailedLog.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'v.Global.sPathLimbo.Set("\\TRIBINE-FS01\LIMBO\")
+'v.Global.sPathLimboFailed.Set("\\TRIBINE-FS01\LIMBO\FAILED\")
+
+v.Global.sPathLimbo.Set("\\192.168.55.7\limbo\")
+v.Global.sPathLimboFailed.Set("\\192.168.55.7\limbo\FAILED\")
+
+'v.Global.sPathLimbo.Set("C:\Users\aanazco\Desktop\Limbo\")
+'v.Global.sPathLimboFailed.Set("C:\Users\aanazco\Desktop\Limbo\Failed\")
+
+f.Intrinsic.Control.CallSub(CustomFolderPreCheck)
+f.Intrinsic.Control.CallSub(getDocPathDT)
+f.Intrinsic.Control.CallSub(checkDocsExist)
+f.Intrinsic.Control.CallSub(getPartNamesFromFiles)
+f.Intrinsic.Control.CallSub(saveLogs)
+f.Intrinsic.Control.CallSub(emailLogs)
+Program.Sub.Main.End
+
+Program.Sub.CustomFolderPreCheck.Start
+v.Local.sFolder.Declare
+v.Local.bExist.Declare
+
+'Checks if the Custom Folder Exists
+f.Intrinsic.String.Build("{0}\CUSTOM", v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\LOGS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+v.Global.sPathLogs.Set(v.Local.sFolder)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)	
+f.Intrinsic.Control.EndIf
+
+'Checks if this particutlar project Folder Exists, in this case Training but it should be the ARC project ID
+f.Intrinsic.String.Build("{0}\CUSTOM\GCG_5249\ZIPS",v.Caller.GlobalDir, v.Local.sFolder)
+f.Intrinsic.File.DirExists(v.Local.sFolder, v.Local.bExist)
+
+'If the folder doesn't exists, it creates it
+f.Intrinsic.Control.If(v.Local.bExist, =, false)
+	f.Intrinsic.File.CreateDir(v.Local.sFolder)
+f.Intrinsic.Control.EndIf
+
+Program.Sub.CustomFolderPreCheck.End
+
+Program.Sub.getDocPathDT.Start
+f.ODBC.Connection!con.OpenCompanyConnection
+	f.Data.DataTable.CreateFromSQL("docPathsDT", "con", "Select * from ATG_DOC_PATH", true)
+f.ODBC.Connection!con.Close
+Program.Sub.getDocPathDT.End
+
+Program.Sub.errorLog.Start
+'log error instead of launching UI.
+Program.Sub.errorLog.End
+
+Program.Sub.checkDocsExist.Start
+v.Local.sFileList.Declare
+'gets a list of files in the Limbo Folder
+
+f.Intrinsic.File.GetFileList(v.Global.sPathLimbo, v.Local.sFileList)
+
+f.Intrinsic.Control.If(v.Local.sFileList, =, "")
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.EndIf
+
+'splits the list into an array
+f.Intrinsic.String.Split(v.Local.sFileList, ":", v.Global.sDocumentList)
+v.Global.sDocumentList.RedimPreserve(0, v.Global.sDocumentList.UBound)
+Program.Sub.checkDocsExist.End
+
+Program.Sub.getPartNamesFromFiles.Start
+v.Local.iCntFiles.Declare
+v.Local.sPartHolder.Declare
+v.Local.sOFullPath.Declare
+v.Local.sNFullPath.Declare
+v.Local.bIsLocked.Declare
+v.Local.iRet.Declare
+v.Local.iPartNameLength.Declare
+v.Local.sPart17Char.Declare
+v.Local.sPartSQL.Declare
+v.Local.sRev.Declare
+v.Local.sSQL.Declare
+v.Local.sBegCharCheck.Declare
+v.Local.sFilter.Declare
+v.Local.sFileExtension.Declare
+v.Local.sFailedFilePath.Declare
+f.Intrinsic.Control.For(v.Local.iCntFiles, 0, v.Global.sDocumentList.UBound, 1)
+
+	f.Intrinsic.String.Split(v.Global.sDocumentList(v.Local.iCntFiles), ".", v.Local.sPartHolder)
+	v.Local.sPartHolder.RedimPreserve(0, v.Local.sPartHolder.UBound)
+	v.Local.iPartNameLength.Set(v.Local.sPartHolder(0).Length)
+	f.Intrinsic.String.UCase(v.Local.sPartHolder(v.Local.sPartHolder.UBound), v.Local.sFileExtension)
+	f.Intrinsic.Math.Sub(v.Local.iPartNameLength, 1, v.Local.iPartNameLength)
+	f.Intrinsic.String.Left(v.Local.sPartHolder(0), v.Local.iPartNameLength, v.Local.sPart17Char)
+	f.Intrinsic.String.RPad(v.Local.sPart17Char, " ", 17, v.Local.sPart17Char)
+	f.Intrinsic.String.Right(v.Local.sPartHolder(0), 1, v.Local.sRev)
+	f.Intrinsic.String.Left(v.Local.sPartHolder(0), 2, v.Local.sBegCharCheck)
+	f.Intrinsic.String.Build("{0}{1}", v.Local.sPart17Char, v.Local.sRev, v.Local.sPartSQL)
+
+	f.Intrinsic.String.Build("DOCTYPE = '{0}'", v.Local.sFileExtension, v.Local.sFilter)
+	f.Data.DataView.Create("docPathsDT", "docPathsDV", 22, v.Local.sFilter, "PATHID")
+		f.Intrinsic.Control.If(v.DataView.docPathsDT!docPathsDV.RowCount, =, 1)
+			v.Global.sPathDoc.Set(v.DataView.docPathsDT!docPathsDV(0).Path!FieldValTrim)
+		f.Intrinsic.Control.Else
+			v.Global.sPathDoc.Set(v.Global.sPathLimboFailed)
+		f.Intrinsic.Control.EndIf
+	f.Data.DataView.Close("docPathsDT", "docPathsDV")
+	'creates old and new paths for the file
+	f.Intrinsic.String.Build("{0}{1}", v.Global.sPathLimbo, v.Global.sDocumentList(v.Local.iCntFiles), v.Local.sOFullPath)
+	f.Intrinsic.String.Build("{0}{1}", v.Global.sPathDoc, v.Global.sDocumentList(v.Local.iCntFiles), v.Local.sNFullPath)
+	'f.Intrinsic.String.Build("{0}{1}", v.Global.sPathDoc, v.Global.sDocumentList(v.Local.iCntFiles), v.Local.sNFullPath)
+	f.ODBC.Connection!con.OpenCompanyConnection
+		f.Intrinsic.String.Build("select * from Inventory_Mstr where part = '{0}'", v.Local.sPartSQL, v.Local.sSQL)
+		f.Data.DataTable.CreateFromSQL("singlePartDT", "con", v.Local.sSQL)
+	f.ODBC.Connection!con.Close
+	
+	f.Intrinsic.Control.If(v.Local.sFileExtension, =, "PDF")
+		v.Global.iDocGroup.Set(1)
+	f.Intrinsic.Control.ElseIf(v.Local.sFileExtension, =, "DXF")
+		v.Global.iDocGroup.Set(2)
+	f.Intrinsic.Control.ElseIf(v.Local.sFileExtension, =, "STP")
+		v.Global.iDocGroup.Set(2)
+	f.Intrinsic.Control.ElseIf(v.Local.sFileExtension, =, "IGS")
+		v.Global.iDocGroup.Set(2)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.If(v.DataTable.singlePartDT.RowCount, =, 1)
+		f.Intrinsic.Control.If(v.Local.sRev.UCase, =, "R")
+			f.Intrinsic.Control.ExitSub
+		f.Intrinsic.Control.ElseIf(v.Local.sRev.IsNumeric)
+			f.Intrinsic.Control.ExitSub
+		f.Intrinsic.Control.ElseIf(v.Local.sBegCharCheck.UCase, =, "MA")
+			f.Intrinsic.Control.ExitSub
+		f.Intrinsic.Control.ElseIf(v.Local.sBegCharCheck.UCase, =, "MP")
+			f.Intrinsic.Control.ExitSub
+		f.Intrinsic.Control.Else
+			'copy file
+			'f.Intrinsic.Control.CallSub(copyFiles,  sDFile, v.Local.sNFullPath, sPart, v.Local.sPartSQL, sPartLog, v.Global.sDocumentList(v.Local.iCntFiles), sOFile, v.Local.sOFullPath, sExtension, v.Local.sPartHolder(1))
+			'f.Intrinsic.Control.CallSub(moveFiles,  sDFile, v.Local.sNFullPath, sPart, v.Local.sPartSQL, sPartLog, v.Global.sDocumentList(v.Local.iCntFiles), sOFile, v.Local.sOFullPath, sExtension, v.Local.sPartHolder(1))
+			'link files.
+			f.Intrinsic.Control.CallSub(LinkFiles, sDFile, v.Local.sNFullPath, sPart, v.Local.sPartSQL, sPartLog, v.Global.sDocumentList(v.Local.iCntFiles), sOFile, v.Local.sOFullPath, sExtension, v.Local.sPartHolder(1))
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Else
+		f.Intrinsic.Control.CallSub(moveFiles,  sDFile, v.Local.sNFullPath, sPart, v.Local.sPartSQL, sPartLog, v.Global.sDocumentList(v.Local.iCntFiles), sOFile, v.Local.sOFullPath, sExtension, v.Local.sPartHolder(1))
+		f.Intrinsic.String.Build("{0}{1}{2}", v.Global.sFailedLog, v.Global.sDocumentList(v.Local.iCntFiles), v.Ambient.NewLine, v.Global.sFailedLog)
+	f.Intrinsic.Control.EndIf
+	f.Data.DataTable.Close("singlePartDT")
+f.Intrinsic.Control.Next(v.Local.iCntFiles)
+
+Program.Sub.getPartNamesFromFiles.End
+
+Program.Sub.copyFiles.Start
+v.Local.bFileLock.Declare
+v.Local.bFileExist.Declare
+
+f.Intrinsic.Control.Try
+	f.Intrinsic.File.IsFileLocked(v.Args.sOFile, v.Local.bFileLock)
+	f.Intrinsic.File.Exists(v.Args.sOFile, v.Local.bFileExist)
+	
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		f.Intrinsic.Control.If(v.Local.bFileLock)
+			f.Intrinsic.File.CopyOpenFile(v.Args.sOFile, v.Args.sDFile)
+		f.Intrinsic.Control.Else
+			f.Intrinsic.File.CopyFile(v.Args.sOFile, v.Args.sDFile)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(ErrorMsg, CurrentSub, v.Ambient.CurrentSubroutine)
+f.Intrinsic.Control.EndTry
+
+Program.Sub.copyFiles.End
+
+Program.Sub.moveFiles.Start
+v.Local.bFileLock.Declare
+v.Local.bFileExist.Declare
+
+f.Intrinsic.Control.Try
+	f.Intrinsic.File.IsFileLocked(v.Args.sOFile, v.Local.bFileLock)
+	f.Intrinsic.File.Exists(v.Args.sOFile, v.Local.bFileExist)
+	
+	f.Intrinsic.Control.If(v.Local.bFileExist)
+		f.Intrinsic.Control.If(v.Local.bFileLock)
+			'f.Intrinsic.File.CopyOpenFile(v.Args.sOFile, v.Args.sDFile)
+		f.Intrinsic.Control.Else
+			'f.Intrinsic.File.CopyFile(v.Args.sOFile, v.Args.sDFile)
+			f.Intrinsic.File.MoveFile(v.Args.sOFile, v.Args.sDFile)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub(ErrorMsg, CurrentSub, v.Ambient.CurrentSubroutine)
+f.Intrinsic.Control.EndTry
+
+Program.Sub.moveFiles.End
+
+Program.Sub.ErrorMsg.Start
+v.Local.sError.Declare
+'Generic Error message.
+f.Intrinsic.String.Build("Project GCG_5249_Document_linking.g2u {0}{0}Subroutine: {1}{0}Error: {2} with Description: {3}", v.Ambient.NewLine, v.Args.CurrentSub, v.Ambient.ErrorNumber, v.Ambient.ErrorDescription, v.Local.sError)
+'f.Intrinsic.UI.Msgbox(v.Local.sError)
+Program.Sub.ErrorMsg.End
+
+Program.Sub.LinkFiles.Start
+v.Local.iLinkID.Declare
+v.Local.sFilter.Declare
+v.Local.iRet.Declare
+v.Local.bFileLocked.Declare
+v.Local.bExist.Declare
+v.Local.bOExist.Declare
+
+f.Intrinsic.File.Exists(v.Args.sDFile, v.Local.bExist)
+f.Intrinsic.File.Exists(v.Args.sOFile, v.Local.bOExist)
+
+f.Intrinsic.Control.If(v.Local.bExist)
+	f.Global.DocumentControl.GetLinkID(v.Args.sPart, 30, v.Local.iLinkID)
+	f.Intrinsic.Control.If(v.Local.iLinkID, =, -1)
+		f.Global.DocumentControl.CreateReference(v.Args.sPart, 30, v.Local.iLinkID)
+		f.Global.DocumentControl.AddDocument(v.Local.iLinkID, v.Args.sDFile, v.Args.SPart, v.Global.iDocGroup, "")
+		f.Intrinsic.Control.If(v.Local.bOExist)
+			f.Intrinsic.File.DeleteFile(v.Args.sOFile)
+			'move the file to the failed.
+		f.Intrinsic.Control.EndIf		
+		f.Intrinsic.String.Build("{0}{1}{2}", v.Global.sLinkedLog, v.Args.sPartLog, v.Ambient.NewLine, v.Global.sLinkedLog)
+	f.Intrinsic.Control.Else
+		f.Global.DocumentControl.AddDocument(v.Local.iLinkID, v.Args.sDFile, v.Args.SPart, v.Global.iDocGroup, v.Args.sExtension)
+		f.Intrinsic.Control.If(v.Local.bOExist)
+			f.Intrinsic.File.DeleteFile(v.Args.sOFile)
+			'move the file to the failed.
+		f.Intrinsic.Control.EndIf
+		f.Intrinsic.String.Build("{0}{1}{2}", v.Global.sLinkedLog, v.Args.sPartLog, v.Ambient.NewLine, v.Global.sLinkedLog)
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+Program.Sub.LinkFiles.End
+
+Program.Sub.saveLogs.Start
+v.Local.sLogName.Declare
+v.Local.sLogPath.Declare
+v.Local.sDateHolder.Declare
+v.Local.sDate.Declare
+v.Local.sTime.Declare
+
+f.Intrinsic.String.Split(v.Ambient.Date, "/", v.Local.sDateHolder)
+f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sDate)
+f.Intrinsic.String.Split(v.Ambient.Time, ":", v.Local.sDateHolder)
+f.Intrinsic.String.Build("{0}-{1}-{2}", v.Local.sDateHolder(0), v.Local.sDateHolder(1),v.Local.sDateHolder(2), v.Local.sTime)
+
+f.Intrinsic.String.Build("Linked_{0}_{1}_LOG.txt", v.Local.sDate, v.Local.sTime, v.Local.sLogName)
+f.Intrinsic.String.Build("{0}\{1}", v.Global.sPathLogs, v.Local.sLogName, v.Local.sLogPath)
+f.Intrinsic.String.Build("Linked Files:{0}{1}", v.Ambient.NewLine, v.Global.sLinkedLog, v.Global.sLinkedLog)
+f.Intrinsic.File.String2File(v.Local.sLogPath, v.Global.sLinkedLog)
+
+
+f.Intrinsic.String.Build("Failed_{0}_{1}_LOG.txt", v.Local.sDate, v.Local.sTime, v.Local.sLogName)
+f.Intrinsic.String.Build("{0}\{1}", v.Global.sPathLogs, v.Local.sLogName, v.Local.sLogPath)
+f.Intrinsic.String.Build("Failed Files:{0}{1}", v.Ambient.NewLine, v.Global.sFailedLog, v.Global.sFailedLog)
+f.Intrinsic.File.String2File(v.Local.sLogPath, v.Global.sFailedLog)
+Program.Sub.saveLogs.End
+
+Program.Sub.emailLogs.Start
+v.Local.iCourier.Declare
+v.Local.sSenderEmail.Declare
+v.Local.iUserID.Declare
+v.Local.sSender.Declare
+v.Local.sRecipients.Declare
+
+f.Global.Security.GetUserEmail(v.Caller.User.Trim, v.Local.sSenderEmail)
+f.Global.Security.GetUserId(v.Caller.User, v.Caller.CompanyCode, v.Local.iUserID)
+f.Global.Security.GetUsernameFromID(v.Local.iUserID, v.Local.sSender)
+
+f.Intrinsic.String.Split(v.Local.sSender, "*!*", v.Local.sSender)
+
+f.Intrinsic.String.Build("{0}*!*{1}", v.Local.sSender(1), v.Local.sSenderEmail, v.Local.sSender)
+
+v.Local.sRecipients.Set("Bryan Claerhout*!*Bryan.Claerhout@tribineharvester.com@!@Paul Scott*!*Paul.Scott@tribineharvester.com")
+
+f.Global.Messaging.IsCourierRunning(v.Local.iCourier)
+
+f.Intrinsic.Control.If(v.Local.iCourier, =, 2)
+	f.Global.Messaging.QueueMessage(v.Caller.CompanyCode, v.Local.iUserID, "", "Linked Documents", v.Local.sSender, v.Local.sRecipients, v.Global.sLinkedLog)
+f.Intrinsic.Control.EndIf
+Program.Sub.emailLogs.End
